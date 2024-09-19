@@ -1,4 +1,7 @@
-IP address found: 192.168.100.61
+IP address found: 
+ - 192.168.100.61
+ - 192.168.8.137
+
 
 Initial version scan results
 ---------------------------
@@ -41,3 +44,97 @@ DECISION
 --------
 
 1. Lets first check the website in both http and https to see what we are dealing with.
+	- Looks like a very cool site made from pictures and videos from Mr. Robot tv show.
+	- There might be useful information in the website content, so check later!
+
+2. Let's see what web framework they are using, if any.
+	$ whatweb 192.168.100.61                                                                                         │        [+] Method:                  GET                                                                         >
+	http://192.168.100.61 [200 OK] Apache, Country[RESERVED][ZZ], HTML5, HTTPServer[Apache], IP[192.168.100.61], Script│        [+] Threads:                 10                                                                          >
+	, UncommonHeaders[x-mod-pagespeed], X-Frame-Options[SAMEORIGIN] 
+
+		- No apparent framework detected. Maybe we can check the uncommon header later to figure it out!
+
+3. Let's do some directory busting and see what we can find.
+
+	$ gobuster dir -u http://192.168.100.61/ -w /usr/share/wordlists/dirb/common.txt                                 │  GNU nano 8.1                                       mr-robot.txt                                                 
+	===============================================================                                                    │IP address found: 
+	Gobuster v3.6                                                                                                      │ - 192.168.100.61
+	by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)                                                      │ - 192.168.8.137
+	===============================================================                                                    │
+	[+] Url:                     http://192.168.100.61/                                                                │
+	[+] Method:                  GET                                                                                   │Initial version scan results
+	[+] Threads:                 10                                                                                    │---------------------------
+	[+] Wordlist:                /usr/share/wordlists/dirb/common.txt                                                  │
+	[+] Negative Status codes:   404                                                                                   │sudo nmap -sV --open -oA initial_full_scan 192.168.100.61                                                      │
+	[+] User Agent:              gobuster/3.6                                                                          │Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-19 11:08 +0530                                             >
+	[+] Timeout:                 10s                                                                                   │Nmap scan report for linux (192.168.100.61)                                                                      >
+	===============================================================                                                    │Host is up (0.00065s latency).                                                                                   >
+	Starting gobuster in directory enumeration mode                                                                    │Not shown: 997 filtered tcp ports (no-response), 1 closed tcp port (reset)                                       >
+	===============================================================                                                    │Some closed ports may be reported as filtered due to --defeat-rst-ratelimit                                      >
+	/.hta                 (Status: 403) [Size: 213]                                                                    │PORT    STATE SERVICE  VERSION                                                                                   >
+	/.htaccess            (Status: 403) [Size: 218]                                                                    │80/tcp  open  http     Apache httpd                                                                              >
+	/.htpasswd            (Status: 403) [Size: 218]                                                                    │443/tcp open  ssl/http Apache httpd                                                                              >
+	/0                    (Status: 301) [Size: 0] [--> http://192.168.100.61/0/]                                       │MAC Address: 08:00:27:0B:77:64 (Oracle VirtualBox virtual NIC)                                                   >
+	/admin                (Status: 301) [Size: 236] [--> http://192.168.100.61/admin/]                                 │                                                                                                                 >
+	/atom                 (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/atom/]                               │Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .                   >
+	/audio                (Status: 301) [Size: 236] [--> http://192.168.100.61/audio/]                                 │Nmap done: 1 IP address (1 host up) scanned in 18.77 seconds
+	/blog                 (Status: 301) [Size: 235] [--> http://192.168.100.61/blog/]                                  │
+	/css                  (Status: 301) [Size: 234] [--> http://192.168.100.61/css/]                                   │Script scan on ports 80 and 443
+	/dashboard            (Status: 302) [Size: 0] [--> http://192.168.100.61/wp-admin/]                                │-------------------------------
+	/favicon.ico          (Status: 200) [Size: 0]                                                                      │
+	/feed                 (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/]                                    │sudo nmap -sC -p 80,443 -oA script_Scan 192.168.100.61                                                         │
+	/images               (Status: 301) [Size: 237] [--> http://192.168.100.61/images/]                                │Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-09-19 11:10 +0530                                             >
+	/image                (Status: 301) [Size: 0] [--> http://192.168.100.61/image/]                                   │Nmap scan report for linux (192.168.100.61)                                                                      >
+	/Image                (Status: 301) [Size: 0] [--> http://192.168.100.61/Image/]                                   │Host is up (0.00059s latency).                                                                                   >
+	/index.html           (Status: 200) [Size: 1188]                                                                   │                                                                                                                 >
+	/index.php            (Status: 301) [Size: 0] [--> http://192.168.100.61/]                                         │PORT    STATE SERVICE                                                                                            >
+	/intro                (Status: 200) [Size: 516314]                                                                 │80/tcp  open  http                                                                                               >
+	/js                   (Status: 301) [Size: 233] [--> http://192.168.100.61/js/]                                    │|_http-title: Site doesn't have a title (text/html).                                                             >
+	/license              (Status: 200) [Size: 19930]                                                                  │443/tcp open  https                                                                                              >
+	/login                (Status: 302) [Size: 0] [--> http://192.168.100.61/wp-login.php]                             │| ssl-cert: Subject: commonName=www.example.com                                                                  >
+	/page1                (Status: 301) [Size: 0] [--> http://192.168.100.61/]                                         │| Not valid before: 2015-09-16T10:45:03                                                                          >
+	/phpmyadmin           (Status: 403) [Size: 94]                                                                     │|_Not valid after:  2025-09-13T10:45:03                                                                          >
+	/readme               (Status: 200) [Size: 7334]                                                                   │|_http-title: Site doesn't have a title (text/html).                                                             >
+	/rdf                  (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/rdf/]                                │MAC Address: 08:00:27:0B:77:64 (Oracle VirtualBox virtual NIC)                                                   >
+	/robots               (Status: 200) [Size: 41]                                                                     │                                                                                                                 >
+	/robots.txt           (Status: 200) [Size: 41]                                                                     │Nmap done: 1 IP address (1 host up) scanned in 5.50 seconds
+	/rss                  (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/]                                    │
+	/rss2                 (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/]                                    │DECISION
+	/sitemap              (Status: 200) [Size: 0]                                                                      │--------
+	/sitemap.xml          (Status: 200) [Size: 0]                                                                      │
+	/video                (Status: 301) [Size: 236] [--> http://192.168.100.61/video/]                                 │1. Lets first check the website in both http and https to see what we are dealing with.
+	/wp-admin             (Status: 301) [Size: 239] [--> http://192.168.100.61/wp-admin/]                              │        - Looks like a very cool site made from pictures and videos from Mr. Robot tv show.
+	/wp-content           (Status: 301) [Size: 241] [--> http://192.168.100.61/wp-content/]                            │        - There might be useful information in the website content, so check later!
+	/wp-config            (Status: 200) [Size: 0]                                                                      │
+	/wp-includes          (Status: 301) [Size: 242] [--> http://192.168.100.61/wp-includes/]                           │2. Let's do some directory busting and see what we can find.
+	/wp-cron              (Status: 200) [Size: 0]                                                                      │
+	/wp-links-opml        (Status: 200) [Size: 228]                                                                    │
+	/wp-load              (Status: 200) [Size: 0]                                                                      │
+	/wp-mail              (Status: 403) [Size: 3018]                                                                   │
+	/wp-login             (Status: 200) [Size: 2696]                                                                   │
+	/wp-settings          (Status: 500) [Size: 0]                                                                      │
+	/wp-signup            (Status: 302) [Size: 0] [--> http://192.168.100.61/wp-login.php?action=register]             │
+	/xmlrpc               (Status: 405) [Size: 42]                                                                     │
+	/xmlrpc.php           (Status: 405) [Size: 42]                                                                     │
+	Progress: 4614 / 4615 (99.98%)                                                                                     │
+	===============================================================                                                    │
+	Finished                                                                                                           │
+	===============================================================    
+
+
+	- /robots.txt revealed 2 more files.
+		- key-1-of-3.txt: 073403c8a58a1f80d943455fb30724b9 (this must be the first key)
+
+		- fsociety.dic: This downloads a huge file (6.9MB) that looks like a wordlist.
+		  Maybe we should use it to dir bust?
+			- This bust revealed mostly the same things as above.
+
+	- /image url seems to access a part of a blog. Running whatweb on that gave me the following info.
+
+		$ whatweb http://192.168.8.137/Image/                                                                           │        /dashboard            (Status: 302) [Size: 0] [--> http://192.168.100.61/wp-admin/]                      >
+		http://192.168.8.137/Image/ [200 OK] Apache, Country[RESERVED][ZZ], HTML5, HTTPServer[Apache], IP[192.168.8.137], │        /favicon.ico          (Status: 200) [Size: 0]                                                            >
+		JQuery, MetaGenerator[WordPress 4.3.34], PHP[5.5.29], PoweredBy[WordPress,WordPress,], Script[text/javascript], Ti│        /feed                 (Status: 301) [Size: 0] [--> http://192.168.100.61/feed/]                          >
+		tle[image | user&#039;s Blog!], UncommonHeaders[link,x-mod-pagespeed], WordPress[4.3.34], X-Frame-Options[SAMEORIG│        /images               (Status: 301) [Size: 237] [--> http://192.168.100.61/images/]                      >
+		IN], X-Powered-By[PHP/5.5.29], x-pingback[http://192.168.8.137/xmlrpc.php] 
+
+		- We can look for wordpress 4.3.34 now.
