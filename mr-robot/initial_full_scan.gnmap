@@ -1,0 +1,4 @@
+# Nmap 7.94SVN scan initiated Thu Sep 19 11:08:44 2024 as: nmap -sV --open -oA initial_full_scan 192.168.100.61
+Host: 192.168.100.61 (linux)	Status: Up
+Host: 192.168.100.61 (linux)	Ports: 80/open/tcp//http//Apache httpd/, 443/open/tcp//ssl|http//Apache httpd/
+# Nmap done at Thu Sep 19 11:09:03 2024 -- 1 IP address (1 host up) scanned in 18.77 seconds

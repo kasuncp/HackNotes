@@ -1,0 +1,12 @@
+# Nmap 7.94SVN scan initiated Thu Sep 19 11:08:44 2024 as: nmap -sV --open -oA initial_full_scan 192.168.100.61
+Nmap scan report for linux (192.168.100.61)
+Host is up (0.00065s latency).
+Not shown: 997 filtered tcp ports (no-response), 1 closed tcp port (reset)
+Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+PORT    STATE SERVICE  VERSION
+80/tcp  open  http     Apache httpd
+443/tcp open  ssl/http Apache httpd
+MAC Address: 08:00:27:0B:77:64 (Oracle VirtualBox virtual NIC)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Thu Sep 19 11:09:03 2024 -- 1 IP address (1 host up) scanned in 18.77 seconds

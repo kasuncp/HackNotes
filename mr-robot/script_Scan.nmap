@@ -1,0 +1,15 @@
+# Nmap 7.94SVN scan initiated Thu Sep 19 11:10:56 2024 as: nmap -sC -p 80,443 -oA script_Scan 192.168.100.61
+Nmap scan report for linux (192.168.100.61)
+Host is up (0.00059s latency).
+
+PORT    STATE SERVICE
+80/tcp  open  http
+|_http-title: Site doesn't have a title (text/html).
+443/tcp open  https
+| ssl-cert: Subject: commonName=www.example.com
+| Not valid before: 2015-09-16T10:45:03
+|_Not valid after:  2025-09-13T10:45:03
+|_http-title: Site doesn't have a title (text/html).
+MAC Address: 08:00:27:0B:77:64 (Oracle VirtualBox virtual NIC)
+
+# Nmap done at Thu Sep 19 11:11:01 2024 -- 1 IP address (1 host up) scanned in 5.50 seconds
