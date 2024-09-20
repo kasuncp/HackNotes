@@ -138,3 +138,5 @@ DECISION
 		IN], X-Powered-By[PHP/5.5.29], x-pingback[http://192.168.8.137/xmlrpc.php] 
 
 		- We can look for wordpress 4.3.34 now.
+
+	- Interesting password like thing i found in the fsociety.dic: PLLLOVER1234
