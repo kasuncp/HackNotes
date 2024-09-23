@@ -140,3 +140,21 @@ DECISION
 		- We can look for wordpress 4.3.34 now.
 
 	- Interesting password like thing i found in the fsociety.dic: PLLLOVER1234
+
+New Direction
+-------------
+
+1. I tried different things and I think there is potential to exploit xmlrpc.php script to enumerate passwords.
+   But first we need to find out the username. So for that let's find out the forgot password url. Let's modify
+   the script for xmlrpc enum for that purpose as well.
+
+	- So by bruteforcing usernames I found this user: Elliot
+	- Password bruteforcing didn't go well with fsocity.dic or common list. Runnng rockyou.txt against it.
+
+2. Looks like the script is going to be very slow for large password files. I will have to multithred this 
+   thing.
+
+3. I made a bunch of mistakes while editing the script. Anyways, it turns out that fsocity.dic indeed had the password.
+   I just need to remove the duplicate words and edit the script in the check reply function.
+
+		- Elliot:ER28-0652
