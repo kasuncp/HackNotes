@@ -158,3 +158,14 @@ New Direction
    I just need to remove the duplicate words and edit the script in the check reply function.
 
 		- Elliot:ER28-0652
+
+4. The only way in was through installing a custom wordpress plugin that ran a revshell.
+		- After gaining initial foothold, found the following user/password
+			- robot:c3fcd3d76192e4007dfb496cca67e13b
+			- Turns out it was a hash, so i reverse hashed it and found the real password: abcdefghijklmnopqrstuvwxyz
+
+5. After logging in as robot, found the 2nd key.
+		- key-2-of-3.txt: 822c73956184f694993bede3eb39f959
+
+6. I was able to get root access with the dirty cow exploit.
+		- key-3-of-3.txt: 04787ddef27c3dee1ee161b21670b4e4
